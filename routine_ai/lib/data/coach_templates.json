@@ -1,0 +1,32 @@
+[
+  {
+    "patternId": "success_rate",
+    "text": "오전 성공률이 {{boost}} 높아요.\n내일 오전에 '{{routine}}' 어떠세요?",
+    "highlight": "{{boost}}",
+    "actionText": "Go!"
+  },
+  {
+    "patternId": "motivation",
+    "text": "오늘은 가볍게 10분만 시작해볼까요? 작은 성취가 가장 커요!",
+    "highlight": null,
+    "actionText": null
+  },
+  {
+    "patternId": "reward",
+    "text": "루틴 완료! XP +{{xp}} 🌱 훌륭해요!",
+    "highlight": "+{{xp}}",
+    "actionText": null
+  },
+  {
+    "patternId": "reminder",
+    "text": "곧 {{time}}에 '{{routine}}' 시간이에요. 준비해볼까요?",
+    "highlight": "{{time}}",
+    "actionText": "Go!"
+  },
+  {
+    "patternId": "generic",
+    "text": "좋은 하루예요! 루틴으로 리듬을 만들어봐요.",
+    "highlight": null,
+    "actionText": null
+  }
+]
