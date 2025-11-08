@@ -11,7 +11,7 @@ pip install -r requirements.txt
 streamlit run app.py --server.port 8501
 ```
 
-환경 변수 또는 `.streamlit/secrets.toml`에 아래 값을 설정하세요.
+환경 변수 또는 `.streamlit/secrets.toml`에 아래 값을 설정하세요. `ADMIN_TOKEN`은 선택 사항입니다.
 ```
 API_BASE=http://127.0.0.1:8000
 ADMIN_TOKEN=dev-admin-token

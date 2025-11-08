@@ -7,11 +7,31 @@ from typing import Any, Callable, Dict, List
 import requests
 import streamlit as st
 
-DEFAULT_API_BASE = os.getenv('API_BASE', 'http://127.0.0.1:8000')
-DEFAULT_TOKEN = os.getenv('ADMIN_TOKEN') or st.secrets.get('ADMIN_TOKEN', '')
-WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일']
-
 st.set_page_config(page_title='Routine AI Admin', layout='wide')
+
+DEFAULT_API_BASE = os.getenv('API_BASE', 'http://127.0.0.1:8000')
+
+def _secret(key: str, default: str = '') -> str:
+  try:
+    return st.secrets[key]
+  except (FileNotFoundError, KeyError):
+    return default
+
+DEFAULT_TOKEN = os.getenv('ADMIN_TOKEN') or _secret('ADMIN_TOKEN')
+WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일']
+ICON_OPTIONS = {
+  'yoga': '스트레칭',
+  'run': '러닝',
+  'book': '독서',
+  'task': '집중',
+  'clean': '정리',
+  'sleep': '수면',
+  'focus': '몰입',
+}
+
+
+def _icon_label(key: str) -> str:
+  return f"{ICON_OPTIONS.get(key, '기본')} ({key})"
 
 if 'api_base' not in st.session_state:
   st.session_state.api_base = DEFAULT_API_BASE.rstrip('/')
@@ -24,9 +44,7 @@ with st.sidebar:
   token_input = st.text_input('Admin Token', value=st.session_state.admin_token, type='password')
   st.session_state.api_base = api_base_input.rstrip('/') or DEFAULT_API_BASE
   st.session_state.admin_token = token_input.strip()
-  st.caption('ADMIN_TOKEN을 secrets.toml 또는 환경 변수로 미리 설정하면 자동으로 채워집니다.')
-  if not st.session_state.admin_token:
-    st.warning('관리자 토큰이 없어 일부 기능이 제한됩니다.')
+  st.caption('ADMIN_TOKEN 입력은 선택 사항이며, 비워두면 공개 권한으로 호출됩니다.')
 
 st.title('Routine AI Admin Console')
 
@@ -37,15 +55,12 @@ def call_api(
   *,
   params: Dict[str, Any] | None = None,
   json: Dict[str, Any] | None = None,
-  require_admin: bool = False,
 ) -> Any:
   base = st.session_state.api_base or DEFAULT_API_BASE
   token = st.session_state.admin_token
   headers = {'Content-Type': 'application/json'}
   if token:
     headers['Authorization'] = f'Bearer {token}'
-  elif require_admin:
-    raise RuntimeError('ADMIN_TOKEN이 필요합니다.')
 
   response = requests.request(
     method=method,
@@ -106,7 +121,7 @@ with st.container():
     else:
       st.info('주간 통계를 불러올 수 없습니다.')
 
-  logs = safe_load('최근 로그 불러오는 중', lambda: call_api('GET', '/admin/logs', params={'limit': 20}, require_admin=True), fallback=[])
+  logs = safe_load('최근 로그 불러오는 중', lambda: call_api('GET', '/admin/logs', params={'limit': 20}), fallback=[])
   st.subheader('최근 20개 로그')
   if logs:
     st.dataframe(logs, use_container_width=True)
@@ -117,7 +132,7 @@ st.divider()
 
 with st.container():
   st.header('Routines 관리')
-  routines = safe_load('루틴 목록 로딩', lambda: call_api('GET', '/admin/routines', params={'user_id': 1}, require_admin=True), fallback=[])
+  routines = safe_load('루틴 목록 로딩', lambda: call_api('GET', '/admin/routines', params={'user_id': 1}), fallback=[])
   if routines:
     st.dataframe(routines, use_container_width=True)
   else:
@@ -133,6 +148,7 @@ with st.container():
       days = st.multiselect('요일', WEEKDAYS, default=['월', '수', '금'])
       difficulty = st.selectbox('난이도', ['easy', 'mid', 'hard'])
       active = st.checkbox('활성화', value=True)
+      icon_key = st.selectbox('아이콘', list(ICON_OPTIONS.keys()), format_func=_icon_label, key='create_icon')
       submitted = st.form_submit_button('루틴 추가')
       if submitted:
         if not title or not days:
@@ -145,8 +161,9 @@ with st.container():
             'days': days,
             'difficulty': difficulty,
             'active': active,
+            'icon_key': icon_key,
           }
-          call_api('POST', '/admin/routines', json=payload, require_admin=True)
+          call_api('POST', '/admin/routines', json=payload)
           notify_success('루틴이 생성되었습니다.')
 
   with col_update:
@@ -161,6 +178,16 @@ with st.container():
         new_days = st.multiselect('요일', WEEKDAYS, default=selected['days'], key=f"days_{selected['id']}")
         new_difficulty = st.selectbox('난이도', ['easy', 'mid', 'hard'], index=['easy', 'mid', 'hard'].index(selected['difficulty']), key=f"diff_{selected['id']}")
         new_active = st.checkbox('활성화', value=selected.get('active', True), key=f"active_{selected['id']}")
+        icon_keys = list(ICON_OPTIONS.keys())
+        default_icon = selected.get('icon_key', 'yoga')
+        initial_index = icon_keys.index(default_icon) if default_icon in icon_keys else 0
+        new_icon_key = st.selectbox(
+          '아이콘',
+          icon_keys,
+          index=initial_index,
+          format_func=_icon_label,
+          key=f"icon_{selected['id']}",
+        )
         updated = st.form_submit_button('루틴 수정')
         if updated:
           payload = {
@@ -169,11 +196,12 @@ with st.container():
             'days': new_days,
             'difficulty': new_difficulty,
             'active': new_active,
+            'icon_key': new_icon_key,
           }
-          call_api('PUT', f"/admin/routines/{selected['id']}", json=payload, require_admin=True)
+          call_api('PUT', f"/admin/routines/{selected['id']}", json=payload)
           notify_success('루틴이 수정되었습니다.')
       if st.button('선택 루틴 삭제'):
-        call_api('DELETE', f"/admin/routines/{selected['id']}", require_admin=True)
+        call_api('DELETE', f"/admin/routines/{selected['id']}")
         notify_success('루틴이 삭제되었습니다.')
     else:
       st.info('수정할 루틴이 없습니다.')
@@ -197,7 +225,7 @@ with st.container():
         'xp': int(xp_input),
         'next_level_threshold': int(threshold_input),
       }
-      call_api('PATCH', '/admin/pet_state', json=payload, require_admin=True)
+      call_api('PATCH', '/admin/pet_state', json=payload)
       notify_success('펫 상태가 업데이트되었습니다.')
 
 st.divider()
@@ -205,5 +233,5 @@ st.divider()
 with st.container():
   st.header('로그 탐색')
   limit = st.slider('가져올 개수', min_value=20, max_value=200, value=50, step=10)
-  logs = safe_load('로그 새로고침', lambda: call_api('GET', '/admin/logs', params={'limit': limit}, require_admin=True), fallback=[])
+  logs = safe_load('로그 새로고침', lambda: call_api('GET', '/admin/logs', params={'limit': limit}), fallback=[])
   st.dataframe(logs, use_container_width=True)
