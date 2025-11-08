@@ -36,14 +36,10 @@ def _build_prompt(payload: RecommendRequest) -> str:
   goals = ', '.join(payload.goals) or '미설정'
   slots = ', '.join(payload.prefer_slots) or '미설정'
   return (
-    '당신은 루틴 코치입니다. JSON만으로 답변하세요.
-'
-    f'사용자 목표: {goals}
-'
-    f'선호 시간대: {slots}
-'
-    '각 루틴은 title, days(문자열 배열), time(HH:MM), duration_min(정수), difficulty(easy/mid/hard), reason(한글 설명)을 포함하세요.
-'
+    '당신은 루틴 코치입니다. JSON만으로 답변하세요.'
+    f'사용자 목표: {goals}'
+    f'선호 시간대: {slots}'
+    '각 루틴은 title, days(문자열 배열), time(HH:MM), duration_min(정수), difficulty(easy/mid/hard), reason(한글 설명)을 포함하세요.'
     '응답은 {"plans": [...]} 형식의 JSON만 포함해야 합니다.'
   )
 

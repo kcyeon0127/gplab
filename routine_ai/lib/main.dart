@@ -79,7 +79,7 @@ class _RootScaffoldState extends State<RootScaffold> {
         onTap: (index) => setState(() => _currentIndex = index),
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: '메인'),
-          BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: '캘린더'),
+          BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: '루틴 관리'),
           BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: '통계'),
           BottomNavigationBarItem(icon: Icon(Icons.people), label: '소셜'),
           BottomNavigationBarItem(icon: Icon(Icons.settings), label: '설정'),

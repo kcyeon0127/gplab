@@ -13,6 +13,7 @@ class RoutineBase(BaseModel):
   days: List[str]
   difficulty: str = Field(default='mid')
   active: bool = Field(default=True)
+  icon_key: str = Field(default='yoga')
 
 
 class RoutineCreate(RoutineBase):
@@ -25,6 +26,7 @@ class RoutineUpdate(BaseModel):
   days: List[str] | None = None
   difficulty: str | None = None
   active: bool | None = None
+  icon_key: str | None = None
 
 
 class RoutineRead(RoutineBase):

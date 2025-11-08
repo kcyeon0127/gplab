@@ -40,8 +40,7 @@ class OllamaClient:
 
     cleaned = text.strip()
     if cleaned.startswith('```'):
-      cleaned = '
-'.join(
+      cleaned = '\n'.join(
         line for line in cleaned.splitlines() if not line.strip().startswith('```')
       ).strip()
 

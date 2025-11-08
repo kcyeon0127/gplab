@@ -30,39 +30,51 @@ class _CalendarScreenState extends State<CalendarScreen> {
     'late': Color(0xFF64B5F6),
   };
 
+  bool _requestedLoad = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _ensureRoutinesLoaded());
+  }
+
   @override
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
     final routines = appState.calendarRoutines;
+    final isLoading = appState.isLoadingRoutines && routines.isEmpty;
     return Scaffold(
-      appBar: AppBar(title: const Text('캘린더')),
+      appBar: AppBar(title: const Text('루틴 관리')),
       floatingActionButton: FloatingActionButton(
         onPressed: _createRoutine,
         child: const Icon(Icons.add),
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: routines.length,
-        itemBuilder: (context, index) {
-          final routine = routines[index];
-          final statusLabel = _statusLabels[routine.status] ?? '상태 미정';
-          final statusColor = _statusColors[routine.status] ?? Colors.grey;
-          final timeLabel = MaterialLocalizations.of(
-            context,
-          ).formatTimeOfDay(routine.time, alwaysUse24HourFormat: true);
-          return RoutineCard(
-            title: routine.title,
-            timeLabel: '$timeLabel 진행',
-            statusLabel: statusLabel,
-            statusColor: statusColor,
-            icon: routine.icon,
-            repeatDays: routine.days,
-            onEdit: () => _editRoutine(routine),
-            onDelete: () => _deleteRoutine(routine),
-            onStatusTap: () => _changeStatus(routine),
-          );
-        },
-      ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : routines.isEmpty
+              ? const Center(child: Text('등록된 루틴이 없습니다. 오른쪽 아래 + 버튼으로 추가해 보세요.'))
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: routines.length,
+                  itemBuilder: (context, index) {
+                    final routine = routines[index];
+                    final statusLabel = _statusLabels[routine.status] ?? '상태 미정';
+                    final statusColor = _statusColors[routine.status] ?? Colors.grey;
+                    final timeLabel = MaterialLocalizations.of(
+                      context,
+                    ).formatTimeOfDay(routine.time, alwaysUse24HourFormat: true);
+                    return RoutineCard(
+                      title: routine.title,
+                      timeLabel: '$timeLabel 진행',
+                      statusLabel: statusLabel,
+                      statusColor: statusColor,
+                      icon: routine.icon,
+                      repeatDays: routine.days,
+                      onEdit: () => _editRoutine(routine),
+                      onDelete: () => _deleteRoutine(routine),
+                    );
+                  },
+                ),
     );
   }
 
@@ -71,12 +83,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
       MaterialPageRoute(builder: (_) => const CreateRoutineScreen()),
     );
     if (!mounted || result == null) return;
-    context.read<AppState>().addCalendarRoutine(
+    final error = await context.read<AppState>().createRoutine(
       title: result.title,
       time: result.time,
-      icon: result.icon,
       days: result.days,
+      iconKey: result.iconKey,
     );
+    if (!mounted) return;
+    if (error != null) {
+      _showError(error);
+    } else {
+      _showMessage('루틴이 추가되었습니다.');
+    }
   }
 
   Future<void> _editRoutine(CalendarRoutine routine) async {
@@ -85,19 +103,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
         builder: (_) => CreateRoutineScreen(
           initialTitle: routine.title,
           initialTime: routine.time,
-          initialIcon: routine.icon,
+          initialIconKey: routine.iconKey,
           initialDays: routine.days,
         ),
       ),
     );
     if (!mounted || result == null) return;
-    context.read<AppState>().updateCalendarRoutine(
+    final error = await context.read<AppState>().updateRoutine(
       routineId: routine.id,
       title: result.title,
       time: result.time,
-      icon: result.icon,
       days: result.days,
+      iconKey: result.iconKey,
     );
+    if (!mounted) return;
+    if (error != null) {
+      _showError(error);
+    } else {
+      _showMessage('루틴이 수정되었습니다.');
+    }
   }
 
   Future<void> _deleteRoutine(CalendarRoutine routine) async {
@@ -119,56 +143,31 @@ class _CalendarScreenState extends State<CalendarScreen> {
       ),
     );
     if (!mounted || confirmed != true) return;
-    context.read<AppState>().deleteCalendarRoutine(routine.id);
-  }
-
-  Future<void> _changeStatus(CalendarRoutine routine) async {
-    final status = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => ListView(
-        shrinkWrap: true,
-        children: _statusLabels.entries
-            .map(
-              (entry) => ListTile(
-                title: Text(entry.value),
-                onTap: () => Navigator.pop(context, entry.key),
-              ),
-            )
-            .toList(),
-      ),
-    );
-    if (status == null || status == routine.status) return;
-    await _reportCompletion(routine, status);
-  }
-
-  Future<void> _reportCompletion(CalendarRoutine routine, String status) async {
-    try {
-      final api = context.read<ApiClient>();
-      final result = await api.reportRoutineCompletion(
-        routineId: routine.id,
-        status: status,
-        startedAt: DateTime.now().subtract(const Duration(minutes: 30)),
-        endedAt: DateTime.now(),
-      );
-      if (!mounted) return;
-      context.read<AppState>().changeCalendarRoutineStatus(routine.id, status);
-      context.read<AppState>().applyPetState(result.petState);
-      final hint = result.coachHint;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            hint == null || hint.isEmpty ? '루틴 상태가 업데이트되었습니다.' : hint,
-          ),
-        ),
-      );
-    } on ApiException catch (error) {
+    final error = await context.read<AppState>().removeRoutine(routine.id);
+    if (!mounted) return;
+    if (error != null) {
       _showError(error);
+    } else {
+      _showMessage('루틴이 삭제되었습니다.');
     }
   }
 
   void _showError(ApiException error) {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(error.message)));
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _ensureRoutinesLoaded() async {
+    if (_requestedLoad) return;
+    _requestedLoad = true;
+    final error = await context.read<AppState>().ensureCalendarRoutinesLoaded();
+    if (error != null && mounted) {
+      _showError(error);
+    }
   }
 }

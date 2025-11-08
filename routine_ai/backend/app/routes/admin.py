@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import json
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..deps import get_db, require_admin_token
+from ..deps import get_db
 from ..models.routine import Routine
 from ..models.routine_log import RoutineLog
 from ..schemas.pet import PetState as PetStateSchema, PetStatePatch
@@ -18,7 +18,7 @@ from ..schemas.routine import (
 )
 from ..services.pet_state_service import get_or_create_pet_state
 
-router = APIRouter(prefix='/admin', tags=['admin'], dependencies=[Depends(require_admin_token)])
+router = APIRouter(prefix='/admin', tags=['admin'])
 
 
 @router.get('/routines', response_model=list[RoutineRead])
@@ -43,6 +43,7 @@ async def create_routine(
     days=_dump_days(payload.days),
     difficulty=payload.difficulty,
     active=payload.active,
+    icon_key=payload.icon_key,
   )
   session.add(record)
   await session.commit()
@@ -70,6 +71,8 @@ async def update_routine(
     record.difficulty = payload.difficulty
   if payload.active is not None:
     record.active = payload.active
+  if payload.icon_key is not None:
+    record.icon_key = payload.icon_key
 
   await session.commit()
   await session.refresh(record)
@@ -80,12 +83,13 @@ async def update_routine(
 async def delete_routine(
   routine_id: int = Path(..., ge=1),
   session: AsyncSession = Depends(get_db),
-) -> None:
+) -> Response:
   record = await session.get(Routine, routine_id)
   if record is None:
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Routine not found')
   await session.delete(record)
   await session.commit()
+  return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.patch('/pet_state', response_model=PetStateSchema)
@@ -128,6 +132,7 @@ def _routine_to_schema(record: Routine) -> RoutineRead:
     days=days,
     difficulty=record.difficulty,
     active=record.active,
+    icon_key=record.icon_key,
   )
 
 

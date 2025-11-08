@@ -12,7 +12,6 @@ class RoutineCard extends StatelessWidget {
     this.repeatDays,
     this.onEdit,
     this.onDelete,
-    this.onStatusTap,
   });
 
   final String title;
@@ -23,7 +22,6 @@ class RoutineCard extends StatelessWidget {
   final List<String>? repeatDays;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
-  final VoidCallback? onStatusTap;
 
   @override
   Widget build(BuildContext context) {
@@ -90,10 +88,7 @@ class RoutineCard extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                TextButton(
-                  onPressed: onStatusTap,
-                  child: const Text('상태 변경'),
-                ),
+                const SizedBox.shrink(),
               ],
             ),
           ],

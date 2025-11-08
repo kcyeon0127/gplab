@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/icon_helper.dart';
+
 /// 캘린더 화면에서 사용하는 루틴 데이터 모델.
 class CalendarRoutine {
   const CalendarRoutine({
@@ -7,7 +9,7 @@ class CalendarRoutine {
     required this.title,
     required this.time,
     required this.status,
-    required this.icon,
+    required this.iconKey,
     required this.days,
   });
 
@@ -15,14 +17,16 @@ class CalendarRoutine {
   final String title;
   final TimeOfDay time;
   final String status;
-  final IconData icon;
+  final String iconKey;
   final List<String> days;
+
+  IconData get icon => iconFromKey(iconKey);
 
   CalendarRoutine copyWith({
     String? title,
     TimeOfDay? time,
     String? status,
-    IconData? icon,
+    String? iconKey,
     List<String>? days,
   }) {
     return CalendarRoutine(
@@ -30,7 +34,7 @@ class CalendarRoutine {
       title: title ?? this.title,
       time: time ?? this.time,
       status: status ?? this.status,
-      icon: icon ?? this.icon,
+      iconKey: iconKey ?? this.iconKey,
       days: days ?? this.days,
     );
   }
@@ -88,4 +92,3 @@ class RoutineRecommendation {
     };
   }
 }
-

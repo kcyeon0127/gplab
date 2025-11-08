@@ -1,4 +1,4 @@
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .config import settings
@@ -15,11 +15,3 @@ async def get_db() -> AsyncSession:
 
 def get_ollama_client() -> OllamaClient:
   return _ollama_client
-
-
-def require_admin_token(authorization: str = Header(...)) -> None:
-  if not authorization.startswith('Bearer '):
-    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Missing bearer token')
-  token = authorization.split(' ', 1)[1]
-  if token != settings.admin_token:
-    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Invalid ADMIN_TOKEN')

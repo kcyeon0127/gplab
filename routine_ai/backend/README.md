@@ -35,7 +35,7 @@ curl -X POST http://127.0.0.1:8000/api/recommend/generate \
 ```
 
 ## 4. 관리자 엔드포인트 사용
-모든 `/admin/*` 요청에는 `Authorization: Bearer <ADMIN_TOKEN>` 헤더가 필요합니다.
+모든 `/admin/*` 요청은 기본적으로 ADMIN_TOKEN을 요구하지만, 현재 데모에서는 인증을 비활성화했으므로 헤더 없이 호출해도 됩니다. 필요하면 아래처럼 토큰을 포함시킬 수 있습니다.
 
 ```bash
 curl http://127.0.0.1:8000/admin/routines \

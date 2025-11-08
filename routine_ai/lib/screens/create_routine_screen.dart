@@ -8,14 +8,16 @@ class RoutineFormResult {
   const RoutineFormResult({
     required this.title,
     required this.time,
-    required this.icon,
+    required this.iconKey,
     required this.days,
   });
 
   final String title;
   final TimeOfDay time;
-  final IconData icon;
+  final String iconKey;
   final List<String> days;
+
+  IconData get icon => iconFromKey(iconKey);
 }
 
 /// 루틴 생성/수정 화면.
@@ -24,14 +26,14 @@ class CreateRoutineScreen extends StatefulWidget {
     super.key,
     this.initialTitle,
     this.initialTime,
-    this.initialIcon,
+    this.initialIconKey,
     this.initialDays,
     this.initialRoutine,
   });
 
   final String? initialTitle;
   final TimeOfDay? initialTime;
-  final IconData? initialIcon;
+  final String? initialIconKey;
   final List<String>? initialDays;
   final RoutineRecommendation? initialRoutine;
 
@@ -53,8 +55,7 @@ class _CreateRoutineScreenState extends State<CreateRoutineScreen> {
     final routine = widget.initialRoutine;
     _titleController = TextEditingController(text: widget.initialTitle ?? routine?.title ?? '');
     _selectedTime = widget.initialTime ?? _parseTime(routine?.time ?? '07:00');
-    _selectedIconKey = routine?.iconKey ??
-        (widget.initialIcon != null ? iconKeyFromData(widget.initialIcon!) : 'yoga');
+    _selectedIconKey = routine?.iconKey ?? widget.initialIconKey ?? 'yoga';
     final existingDays = widget.initialDays ?? routine?.days;
     if (existingDays != null && existingDays.isNotEmpty) {
       _selectedDays = existingDays.toSet();
@@ -185,7 +186,7 @@ class _CreateRoutineScreenState extends State<CreateRoutineScreen> {
       RoutineFormResult(
         title: title,
         time: time,
-        icon: iconFromKey(_selectedIconKey),
+        iconKey: _selectedIconKey,
         days: orderedDays,
       ),
     );

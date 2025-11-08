@@ -76,6 +76,61 @@ class RoutinePlan {
   }
 }
 
+/// 백엔드 루틴 정보.
+class RoutineRemote {
+  RoutineRemote({
+    required this.id,
+    required this.userId,
+    required this.title,
+    required this.time,
+    required this.days,
+    required this.difficulty,
+    required this.active,
+    required this.iconKey,
+  });
+
+  final int id;
+  final int userId;
+  final String title;
+  final String time;
+  final List<String> days;
+  final String difficulty;
+  final bool active;
+  final String iconKey;
+
+  factory RoutineRemote.fromJson(Map<String, dynamic> json) {
+    final id = json['id'];
+    final userId = json['user_id'] ?? json['userId'];
+    final title = json['title'];
+    final time = json['time'];
+    final daysRaw = json['days'];
+    final difficulty = (json['difficulty'] ?? 'mid').toString();
+    final activeRaw = json['active'];
+    final iconKey = json['icon_key'] ?? json['iconKey'] ?? 'yoga';
+    if (id is int && userId is int && title is String && time is String && iconKey is String) {
+      final days = daysRaw is List
+          ? daysRaw.map((e) => e.toString()).toList()
+          : <String>[];
+      final isActive = activeRaw is bool
+          ? activeRaw
+          : activeRaw is num
+              ? activeRaw != 0
+              : true;
+      return RoutineRemote(
+        id: id,
+        userId: userId,
+        title: title,
+        time: time,
+        days: days,
+        difficulty: difficulty,
+        active: isActive,
+        iconKey: iconKey,
+      );
+    }
+    throw const FormatException('Invalid routine payload');
+  }
+}
+
 /// 주간 통계 응답 모델.
 class WeeklyStats {
   WeeklyStats({
@@ -143,7 +198,7 @@ class ApiClient {
   ApiClient()
       : _dio = Dio(
           BaseOptions(
-            baseUrl: kApiBase,
+            baseUrl: resolvedApiBase,
             connectTimeout: const Duration(seconds: 10),
             receiveTimeout: const Duration(seconds: 10),
             sendTimeout: const Duration(seconds: 10),
@@ -275,6 +330,84 @@ class ApiClient {
         return RoutineCompletionResult.fromJson(data);
       }
       throw const FormatException('Invalid completion response');
+    });
+  }
+
+  Future<List<RoutineRemote>> fetchUserRoutines() {
+    return _guard(() async {
+      final response = await _dio.get('/api/routine', queryParameters: {'user_id': 1});
+      final data = response.data;
+      if (data is List) {
+        return data
+            .whereType<Map<String, dynamic>>()
+            .map(RoutineRemote.fromJson)
+            .toList();
+      }
+      throw const FormatException('Invalid routine list');
+    });
+  }
+
+  Future<RoutineRemote> createRoutine({
+    required String title,
+    required String time,
+    required List<String> days,
+    required String difficulty,
+    required bool active,
+    required String iconKey,
+  }) {
+    return _guard(() async {
+      final response = await _dio.post(
+        '/api/routine',
+        data: {
+          'user_id': 1,
+          'title': title,
+          'time': time,
+          'days': days,
+          'difficulty': difficulty,
+          'active': active,
+          'icon_key': iconKey,
+        },
+      );
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        return RoutineRemote.fromJson(data);
+      }
+      throw const FormatException('Invalid routine payload');
+    });
+  }
+
+  Future<RoutineRemote> updateRoutine({
+    required int routineId,
+    required String title,
+    required String time,
+    required List<String> days,
+    required String difficulty,
+    required bool active,
+    required String iconKey,
+  }) {
+    return _guard(() async {
+      final response = await _dio.put(
+        '/api/routine/$routineId',
+        data: {
+          'title': title,
+          'time': time,
+          'days': days,
+          'difficulty': difficulty,
+          'active': active,
+          'icon_key': iconKey,
+        },
+      );
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        return RoutineRemote.fromJson(data);
+      }
+      throw const FormatException('Invalid routine payload');
+    });
+  }
+
+  Future<void> deleteRoutine({required int routineId}) {
+    return _guard<void>(() async {
+      await _dio.delete('/api/routine/$routineId');
     });
   }
 

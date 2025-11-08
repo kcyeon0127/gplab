@@ -47,6 +47,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // 주간 개요(더미 → 추후 API 교체 예정)
     await appState.bootstrapWeeklyOverview();
+
+    final routinesError = await appState.ensureCalendarRoutinesLoaded();
+    if (mounted && routinesError != null) {
+      _showError(routinesError);
+    }
   }
 
   @override
@@ -75,6 +80,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   isLoading: appState.isLoadingPet,
                 ),
                 const SizedBox(height: 24),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '11월 달력',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 SizedBox(
                   height: 100,
                   child: SingleChildScrollView(

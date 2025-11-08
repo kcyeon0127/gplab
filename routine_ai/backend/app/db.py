@@ -20,3 +20,11 @@ async def get_session() -> AsyncSession:
 async def init_db() -> None:
   async with _engine.begin() as conn:
     await conn.run_sync(Base.metadata.create_all)
+    await _ensure_routine_icon_column(conn)
+
+
+async def _ensure_routine_icon_column(conn) -> None:
+  result = await conn.exec_driver_sql('PRAGMA table_info(routines)')
+  columns = {row[1] for row in result}
+  if 'icon_key' not in columns:
+    await conn.exec_driver_sql("ALTER TABLE routines ADD COLUMN icon_key TEXT DEFAULT 'yoga'")

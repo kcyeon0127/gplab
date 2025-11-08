@@ -16,3 +16,4 @@ class Routine(Base):
   days: Mapped[str] = mapped_column(String(200), nullable=False)
   difficulty: Mapped[str] = mapped_column(String(20), default='mid')
   active: Mapped[bool] = mapped_column(Boolean, default=True)
+  icon_key: Mapped[str] = mapped_column(String(50), default='yoga')

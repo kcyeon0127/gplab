@@ -20,21 +20,30 @@ class WeeklyRingBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (weekly.isEmpty) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final maxWidth = constraints.maxWidth.isFinite
+              ? constraints.maxWidth
+              : MediaQuery.of(context).size.width - 32;
+          return SizedBox(
+            width: maxWidth.clamp(200, double.infinity),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Text('주간 데이터가 없어요. 루틴을 완료하면 여기에 표시됩니다.'),
             ),
-          ],
-        ),
-        child: const Text('주간 데이터가 없어요. 루틴을 완료하면 여기에 표시됩니다.'),
+          );
+        },
       );
     }
 

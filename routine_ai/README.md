@@ -1,15 +1,15 @@
 # Routine AI
 
 ## 프로젝트 개요
-Routine AI는 Flutter 웹/모바일 클라이언트, FastAPI + SQLite 백엔드, Streamlit 기반 관리자 툴을 한 번에 구동하는 루틴 코치 프로토타입입니다. 코치 챗봇, 루틴 추천, 펫 성장, 통계, 관리자 CRUD 파이프라인이 모두 연결되어 있습니다.
+Routine AI는 Flutter 프론트엔드, FastAPI + SQLite 백엔드, Streamlit 관리자 툴이 하나로 연결된 루틴 코치 프로토타입입니다. 사용자는 홈 화면에서 펫 상태와 코치 메시지를 확인하고, 루틴 추천/완료/통계를 모두 동일한 API로 처리합니다. 관리자는 Streamlit 콘솔에서 루틴과 펫 상태를 바로 수정할 수 있습니다.
 
 ## 요구사항 요약
-- Flutter 3.x: 홈 진입 시 펫 상태를 API로 불러오고, 실패 시 스낵바로 안내합니다.
-- FastAPI(포트 8000): Ollama 연동/더미 응답, SQLite aiosqlite, ADMIN_TOKEN 인증 기반 `/admin/*` API.
-- Streamlit(포트 8501): 관리자용 대시보드 + 루틴 CRUD + 펫 상태 조정 + 로그 열람.
-- 공통: `.env.sample`, `requirements.txt`, `pyproject.toml` 제공, 모든 응답은 Null-safe/Pydantic 타입을 사용합니다.
+- **Flutter 3.x**: 홈 진입 시 `GET /api/pet/state`로 펫 상태를 가져와 렌더링하며, 실패 시 스낵바로 “서버 응답이 없습니다.” 또는 “데이터 형식 오류” 메시지를 띄웁니다.
+- **FastAPI (포트 8000)**: SQLite(aiosqlite) 기반으로 펫/코치/추천/루틴/통계/Admin API를 제공하며, 현재 데모에서는 ADMIN_TOKEN 검증을 비활성화해 누구나 `/admin/*`에 접근할 수 있습니다. Ollama가 없으면 자동으로 더미 응답을 제공합니다.
+- **Streamlit (포트 8501)**: 관리자 대시보드, 루틴 CRUD, 펫 상태 조정, 로그 탐색을 모두 FastAPI 경유로 실행합니다.
+- **공통**: `.env.sample`, `requirements.txt`, `pyproject.toml`을 제공하며 모든 코드에 주석과 타입(Null-safety/Pydantic)을 명시했습니다.
 
-## 빠른 실행 (3창)
+## 빠른 실행 (3개의 터미널 창)
 ### 0) Ollama (선택)
 ```bash
 ollama serve
@@ -24,7 +24,7 @@ pip install -r requirements.txt
 cp .env.sample .env
 uvicorn app.main:app --reload --port 8000
 ```
-테스트: http://127.0.0.1:8000/docs
+- OpenAPI 문서: http://127.0.0.1:8000/docs
 
 ### 2) Streamlit 관리자 (포트 8501)
 ```bash
@@ -33,22 +33,24 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 streamlit run app.py --server.port 8501
 ```
-접속: http://127.0.0.1:8501
+- 접속: http://127.0.0.1:8501
+- `API_BASE`는 필수, `ADMIN_TOKEN`은 선택(입력 시 Authorization 헤더 추가)
 
-### 3) Flutter 프론트 (Chrome 권장)
+### 3) Flutter 프론트 (Chrome 예시)
 ```bash
 flutter pub get
 flutter run -d chrome
 ```
+- 백엔드 주소는 `lib/constants.dart`의 `kApiBase` (기본 `http://127.0.0.1:8000`)를 사용합니다.
 
 ## 문제 해결 가이드
-- **CORS 실패**: 백엔드 `app/main.py`가 `http://localhost:*`, `http://127.0.0.1:*`를 허용합니다. 다른 호스트를 쓰면 `allow_origin_regex`를 수정하세요.
-- **연결 거부**: FastAPI/Streamlit/Ollama가 각각 8000/8501/11434 포트에서 켜져 있는지 확인하세요. 이미 사용 중이면 포트 변경 후 Flutter `lib/constants.dart`의 `kApiBase`를 맞추세요.
-- **JSON 파싱 실패**: 백엔드 로그와 Flutter `ApiException` 스낵바에서 "데이터 형식 오류"가 보이면 응답 스키마를 확인하고 `/docs`에서 실제 값을 테스트하세요.
-- **에뮬레이터 네트워크**: Android 에뮬레이터에서는 `http://10.0.2.2:8000`을 사용해야 합니다. 필요 시 `kApiBase`를 해당 주소로 바꿔주세요.
+- **CORS 실패**: FastAPI `app/main.py`에서 `http://localhost:*`, `http://127.0.0.1:*`를 허용합니다. 다른 호스트로 접근한다면 `allow_origin_regex`를 수정하세요.
+- **연결 거부**: 8000(FastAPI), 8501(Streamlit), 11434(Ollama) 포트가 이미 사용 중인지 확인하고, 변경 시 Flutter `kApiBase`와 `.env`의 `OLLAMA_URL`을 함께 조정하세요.
+- **JSON 파싱 오류**: Flutter에서 “데이터 형식 오류” 스낵바가 뜨면 백엔드 `/docs`에서 동일 요청을 실행해 실제 응답 구조를 점검하세요.
+- **Android 에뮬레이터**: 로컬호스트 대신 `http://10.0.2.2:8000`을 사용해야 합니다. 필요 시 `kApiBase`를 해당 주소로 변경하세요.
 
 ## 디렉터리 구조
-- `lib/` – Flutter UI/서비스/위젯
-- `backend/` – FastAPI + SQLite + Ollama BFF
-- `admin_app/` – Streamlit 관리자 툴
-- `assets/` – 펫 이미지 등 정적 자산
+- `lib/` – Flutter 위젯/서비스/프로바이더
+- `backend/` – FastAPI + SQLite + Ollama 연동 BFF
+- `admin_app/` – Streamlit 관리자 앱
+- `assets/` – 펫 이미지 등 정적 리소스
