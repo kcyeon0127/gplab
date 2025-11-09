@@ -28,8 +28,21 @@ class ProgressRingPainter extends CustomPainter {
     final radius = (size.shortestSide - strokeWidth) / 2;
 
     if (failed) {
-      final failurePaint = Paint()..color = failureColor;
-      canvas.drawCircle(center, radius, failurePaint);
+      final backgroundPaint = Paint()
+        ..color = baseColor
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeWidth = strokeWidth;
+
+      final failurePaint = Paint()
+        ..color = failureColor
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeWidth = strokeWidth;
+
+      canvas.drawCircle(center, radius, backgroundPaint);
+      final rect = Rect.fromCircle(center: center, radius: radius);
+      canvas.drawArc(rect, -math.pi / 2, math.pi * 2, false, failurePaint);
       return;
     }
 
@@ -53,7 +66,13 @@ class ProgressRingPainter extends CustomPainter {
       ..strokeWidth = strokeWidth;
 
     final rect = Rect.fromCircle(center: center, radius: radius);
-    canvas.drawArc(rect, -math.pi / 2, math.pi * 2 * clamped, false, progressPaint);
+    canvas.drawArc(
+      rect,
+      -math.pi / 2,
+      math.pi * 2 * clamped,
+      false,
+      progressPaint,
+    );
   }
 
   @override

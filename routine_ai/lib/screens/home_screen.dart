@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../constants.dart';
 import '../models/routine_item.dart';
 import '../models/weekly_day_status.dart';
 import '../providers/app_state.dart';
@@ -24,6 +25,25 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   bool _didInit = false;
   bool _isFetchingRecommend = false;
+  final Set<int> _completingRoutineIds = <int>{};
+
+  static const List<_RoutineStatusOption> _statusOptions = [
+    _RoutineStatusOption('done', '완료', Icons.check_circle, kSeedColor),
+    _RoutineStatusOption('late', '지각', Icons.timelapse, Color(0xFF64B5F6)),
+    _RoutineStatusOption(
+      'partial',
+      '부분',
+      Icons.incomplete_circle,
+      Color(0xFFFFB74D),
+    ),
+    _RoutineStatusOption('miss', '미완료', Icons.close_rounded, Color(0xFFF46D6D)),
+  ];
+  static const _RoutineStatusOption _pendingOption = _RoutineStatusOption(
+    'pending',
+    '대기',
+    Icons.radio_button_unchecked,
+    Colors.grey,
+  );
 
   @override
   void initState() {
@@ -42,7 +62,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final error = await appState.refreshPetState();
     if (mounted && error != null) {
       _showError(error);
-      appState.applyPetState(PetState(level: 1, xp: 0, nextLevelThreshold: 100));
+      appState.applyPetState(
+        PetState(level: 1, xp: 0, nextLevelThreshold: 100),
+      );
     }
 
     // 주간 개요(더미 → 추후 API 교체 예정)
@@ -60,11 +82,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final weekly = appState.weeklyStatuses;
 
     // 선택된 요일 인덱스 보정
-    final selectedIndex =
-    weekly.isEmpty ? 0 : appState.selectedDayIndex.clamp(0, weekly.length - 1);
+    final int selectedIndex = weekly.isEmpty
+        ? 0
+        : appState.selectedDayIndex.clamp(0, weekly.length - 1).toInt();
 
-    final WeeklyDayStatus? selectedStatus =
-    weekly.isEmpty ? null : weekly[selectedIndex];
+    final WeeklyDayStatus? selectedStatus = weekly.isEmpty
+        ? null
+        : weekly[selectedIndex];
 
     return Scaffold(
       appBar: AppBar(title: const Text('Home')),
@@ -85,25 +109,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      '11월 달력',
+                      '11월',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                   ),
                 ),
                 const SizedBox(height: 8),
                 SizedBox(
-                  height: 100,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(minWidth: MediaQuery.of(context).size.width - 40),
-                      child: WeeklyRingBar(
-                        weekly: weekly,
-                        selectedIndex: selectedIndex,
-                        onSelect: (index) => context.read<AppState>().selectDay(index),
-                      ),
-                    ),
+                  height: 110,
+                  child: WeeklyRingBar(
+                    weekly: weekly,
+                    selectedIndex: selectedIndex,
+                    onSelect: (index) =>
+                        context.read<AppState>().selectDay(index),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -118,7 +136,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   alignment: Alignment.center,
                   child: CoachSection(
                     onGo: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const RecommendScreen()),
+                      MaterialPageRoute(
+                        builder: (_) => const RecommendScreen(),
+                      ),
                     ),
                   ),
                 ),
@@ -126,11 +146,22 @@ class _HomeScreenState extends State<HomeScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton.icon(
-                    onPressed: _isFetchingRecommend ? null : _openAiRecommendRoutine,
+                    onPressed: _isFetchingRecommend
+                        ? null
+                        : _openAiRecommendRoutine,
                     icon: _isFetchingRecommend
-                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
                         : const Icon(Icons.auto_awesome),
-                    label: Text(_isFetchingRecommend ? '불러오는 중...' : 'AI 추천으로 추가'),
+                    label: Text(
+                      _isFetchingRecommend ? '불러오는 중...' : 'AI 추천으로 추가',
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -139,6 +170,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   context,
                   selectedStatus,
                   appState.selectedDayRoutines,
+                  appState,
                 ),
 
                 const SizedBox(height: 24),
@@ -173,18 +205,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// "오늘의 루틴" 섹션(또는 선택 요일 루틴) 렌더
   Widget _buildTodaySection(
-      BuildContext context,
-      WeeklyDayStatus? status,
-      List<RoutineItem> routines,
-      ) {
-    final label = status == null ? '오늘의 루틴' : '${status.weekdayLabel}요일 루틴';
+    BuildContext context,
+    WeeklyDayStatus? status,
+    List<RoutineItem> routines,
+    AppState appState,
+  ) {
+    final date = status?.date ?? DateTime.now();
+    final label = status == null
+        ? '오늘의 루틴'
+        : '${date.month}월 ${date.day}일 (${status.weekdayLabel}) 루틴';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 12),
-
-        // 루틴이 없을 때 안내
         if (routines.isEmpty)
           Container(
             padding: const EdgeInsets.all(16),
@@ -199,12 +233,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
-            child: const Text('오늘은 예정된 루틴이 없습니다.'),
+            child: const Text('등록된 루틴이 없습니다. 루틴 관리 탭에서 추가해 보세요.'),
           )
         else
-        // 루틴 카드 리스트
           Column(
             children: routines.map((routine) {
+              final statusValue = appState.routineStatusForDate(
+                routine.id,
+                date,
+              );
+              final statusOption = _optionForStatus(statusValue);
+              final isUpdating = _completingRoutineIds.contains(routine.id);
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(16),
@@ -219,38 +258,109 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CircleAvatar(
-                      backgroundColor: Colors.grey.shade200,
-                      child: Icon(routine.icon, color: Colors.grey.shade700),
-                    ),
-                    const SizedBox(width: 16),
-
-                    // 제목/시간
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(routine.title,
-                              style: Theme.of(context).textTheme.titleMedium),
-                          const SizedBox(height: 6),
-                          Text('시간: ${routine.time}',
-                              style: Theme.of(context).textTheme.bodyMedium),
-                        ],
-                      ),
-                    ),
-
-                    // (임시) 완료 토글 자리
-                    IconButton(
-                      icon: const Icon(Icons.check_circle_outline),
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('루틴 완료 토글은 추후 연결 예정입니다.'),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: kSeedColor.withValues(alpha: 0.15),
+                          child: Icon(routine.icon, color: kSeedColor),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                routine.title,
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                '시간: ${routine.time}',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ],
                           ),
-                        );
-                      },
+                        ),
+                        SizedBox(
+                          height: 40,
+                          child: isUpdating
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : PopupMenuButton<String>(
+                                  tooltip: '루틴 상태 변경',
+                                  onSelected: (value) =>
+                                      _handleRoutineStatusChange(
+                                        routine,
+                                        value,
+                                        date,
+                                      ),
+                                  itemBuilder: (context) => _statusOptions
+                                      .map(
+                                        (option) => PopupMenuItem<String>(
+                                          value: option.value,
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                option.icon,
+                                                color: option.color,
+                                                size: 18,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(option.label),
+                                            ],
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                  icon: Icon(
+                                    statusOption.icon,
+                                    color: statusOption.color,
+                                  ),
+                                ),
+                        ),
+                      ],
+                    ),
+                    if (routine.days.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: routine.days
+                            .map(
+                              (day) => Chip(
+                                label: Text(day),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: statusOption.color.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '상태: ${statusOption.label}',
+                        style: TextStyle(
+                          color: statusOption.color,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -265,9 +375,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildRecommendCard(BuildContext context) {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const RecommendScreen()),
-      ),
+      onTap: () => Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => const RecommendScreen())),
       child: Card(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
@@ -279,9 +389,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: const [
-                    Text('AI 루틴 추천 받기',
-                        style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    Text(
+                      'AI 루틴 추천 받기',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     SizedBox(height: 4),
                     Text('목표와 시간대를 선택해 맞춤 루틴을 받아보세요.'),
                   ],
@@ -310,8 +424,9 @@ class _HomeScreenState extends State<HomeScreen> {
       _showError(error);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('추천을 불러오지 못했어요: $error')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('추천을 불러오지 못했어요: $error')));
     } finally {
       if (mounted) {
         setState(() => _isFetchingRecommend = false);
@@ -319,11 +434,58 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _handleRoutineStatusChange(
+    RoutineItem routine,
+    String newStatus,
+    DateTime date,
+  ) async {
+    final appState = context.read<AppState>();
+    final current = appState.routineStatusForDate(routine.id, date);
+    if (current == newStatus) return;
+
+    setState(() => _completingRoutineIds.add(routine.id));
+    try {
+      final result = await appState.completeRoutine(
+        routine: routine,
+        status: newStatus,
+        completedDate: date,
+      );
+      if (!mounted) return;
+      final hint = result.coachHint?.trim();
+      final message = (hint == null || hint.isEmpty) ? '루틴 상태가 저장되었습니다.' : hint;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    } on ApiException catch (error) {
+      _showError(error);
+    } finally {
+      if (mounted) {
+        setState(() => _completingRoutineIds.remove(routine.id));
+      }
+    }
+  }
+
+  static _RoutineStatusOption _optionForStatus(String value) {
+    return _statusOptions.firstWhere(
+      (option) => option.value == value,
+      orElse: () => _pendingOption,
+    );
+  }
+
   /// API 예외를 사용자 메시지로 변환하여 스낵바로 노출
   void _showError(ApiException error) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(error.message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(error.message)));
   }
+}
 
+class _RoutineStatusOption {
+  const _RoutineStatusOption(this.value, this.label, this.icon, this.color);
+
+  final String value;
+  final String label;
+  final IconData icon;
+  final Color color;
 }

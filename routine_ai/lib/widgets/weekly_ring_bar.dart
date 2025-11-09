@@ -47,28 +47,41 @@ class WeeklyRingBar extends StatelessWidget {
       );
     }
 
-    final items = List<Widget>.generate(weekly.length, (index) {
-      final status = weekly[index];
-      final isSelected = selectedIndex == index;
-      return Padding(
-        padding: EdgeInsets.only(right: index == weekly.length - 1 ? 0 : 12),
-        child: _DayCircle(
-          status: status,
-          isSelected: isSelected,
-          onTap: () => onSelect(index),
-        ),
-      );
-    });
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: items,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : MediaQuery.of(context).size.width - 32;
+        return SizedBox(
+          width: maxWidth,
+          height: 100,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            itemBuilder: (context, index) {
+              final status = weekly[index];
+              final isSelected = selectedIndex == index;
+              return _DayCircle(
+                status: status,
+                isSelected: isSelected,
+                onTap: () => onSelect(index),
+              );
+            },
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemCount: weekly.length,
+          ),
+        );
+      },
     );
   }
 }
 
 class _DayCircle extends StatelessWidget {
-  const _DayCircle({required this.status, required this.isSelected, required this.onTap});
+  const _DayCircle({
+    required this.status,
+    required this.isSelected,
+    required this.onTap,
+  });
 
   final WeeklyDayStatus status;
   final bool isSelected;
@@ -110,7 +123,11 @@ class _DayCircle extends StatelessWidget {
                     child: const SizedBox.expand(),
                   ),
                   if (status.failed)
-                    const Icon(Icons.priority_high, color: Colors.white, size: 18)
+                    const Icon(
+                      Icons.priority_high,
+                      color: Colors.white,
+                      size: 18,
+                    )
                   else
                     Text(
                       '${status.date.day}',
@@ -120,14 +137,21 @@ class _DayCircle extends StatelessWidget {
                     const Positioned(
                       bottom: 6,
                       right: 6,
-                      child: Icon(Icons.check_circle, color: kSeedColor, size: 16),
+                      child: Icon(
+                        Icons.check_circle,
+                        color: kSeedColor,
+                        size: 16,
+                      ),
                     ),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 6),
-          Text(status.weekdayLabel, style: Theme.of(context).textTheme.bodySmall),
+          Text(
+            status.weekdayLabel,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
         ],
       ),
     );

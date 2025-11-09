@@ -36,7 +36,7 @@ class OllamaClient:
 
   @staticmethod
   def extract_json_block(text: str) -> Any:
-    """코드펜스 유무에 상관 없이 JSON 블록만 추출한다."""
+    """코드펜스로 둘러싸인 JSON 문자열을 파싱한다."""
 
     cleaned = text.strip()
     if cleaned.startswith('```'):
@@ -48,4 +48,7 @@ class OllamaClient:
     if match:
       cleaned = match.group(0)
 
-    return json.loads(cleaned)
+    try:
+      return json.loads(cleaned)
+    except json.JSONDecodeError as error:
+      raise OllamaException(f'JSON 파싱 실패: {error}') from error

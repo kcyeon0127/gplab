@@ -10,12 +10,14 @@ class RoutineFormResult {
     required this.time,
     required this.iconKey,
     required this.days,
+    required this.difficulty,
   });
 
   final String title;
   final TimeOfDay time;
   final String iconKey;
   final List<String> days;
+  final String difficulty;
 
   IconData get icon => iconFromKey(iconKey);
 }
@@ -29,6 +31,7 @@ class CreateRoutineScreen extends StatefulWidget {
     this.initialIconKey,
     this.initialDays,
     this.initialRoutine,
+    this.initialDifficulty,
   });
 
   final String? initialTitle;
@@ -36,26 +39,40 @@ class CreateRoutineScreen extends StatefulWidget {
   final String? initialIconKey;
   final List<String>? initialDays;
   final RoutineRecommendation? initialRoutine;
+  final String? initialDifficulty;
 
   @override
   State<CreateRoutineScreen> createState() => _CreateRoutineScreenState();
 }
 
 class _CreateRoutineScreenState extends State<CreateRoutineScreen> {
-  static const List<String> _weekdayOptions = ['월', '화', '수', '목', '금', '토', '일'];
+  static const List<String> _weekdayOptions = [
+    '월',
+    '화',
+    '수',
+    '목',
+    '금',
+    '토',
+    '일',
+  ];
 
   late final TextEditingController _titleController;
   TimeOfDay? _selectedTime;
   late String _selectedIconKey;
   late Set<String> _selectedDays;
+  late String _selectedDifficulty;
 
   @override
   void initState() {
     super.initState();
     final routine = widget.initialRoutine;
-    _titleController = TextEditingController(text: widget.initialTitle ?? routine?.title ?? '');
+    _titleController = TextEditingController(
+      text: widget.initialTitle ?? routine?.title ?? '',
+    );
     _selectedTime = widget.initialTime ?? _parseTime(routine?.time ?? '07:00');
     _selectedIconKey = routine?.iconKey ?? widget.initialIconKey ?? 'yoga';
+    _selectedDifficulty =
+        widget.initialDifficulty ?? routine?.difficulty ?? 'mid';
     final existingDays = widget.initialDays ?? routine?.days;
     if (existingDays != null && existingDays.isNotEmpty) {
       _selectedDays = existingDays.toSet();
@@ -72,7 +89,8 @@ class _CreateRoutineScreenState extends State<CreateRoutineScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isEditing = widget.initialTitle != null || widget.initialRoutine != null;
+    final isEditing =
+        widget.initialTitle != null || widget.initialRoutine != null;
     return Scaffold(
       appBar: AppBar(title: Text(isEditing ? '루틴 수정' : '루틴 생성')),
       body: SingleChildScrollView(
@@ -82,7 +100,10 @@ class _CreateRoutineScreenState extends State<CreateRoutineScreen> {
           children: [
             TextField(
               controller: _titleController,
-              decoration: const InputDecoration(labelText: '루틴 제목', border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                labelText: '루틴 제목',
+                border: OutlineInputBorder(),
+              ),
             ),
             const SizedBox(height: 16),
             OutlinedButton.icon(
@@ -100,10 +121,31 @@ class _CreateRoutineScreenState extends State<CreateRoutineScreen> {
                     (entry) => ChoiceChip(
                       label: Icon(entry.value),
                       selected: _selectedIconKey == entry.key,
-                      onSelected: (_) => setState(() => _selectedIconKey = entry.key),
+                      onSelected: (_) =>
+                          setState(() => _selectedIconKey = entry.key),
                     ),
                   )
                   .toList(),
+            ),
+            const SizedBox(height: 24),
+            Text('난이도', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: ['easy', 'mid', 'hard'].map((level) {
+                final label = switch (level) {
+                  'easy' => '쉬움',
+                  'mid' => '보통',
+                  'hard' => '어려움',
+                  _ => level,
+                };
+                return ChoiceChip(
+                  label: Text(label),
+                  selected: _selectedDifficulty == level,
+                  onSelected: (_) =>
+                      setState(() => _selectedDifficulty = level),
+                );
+              }).toList(),
             ),
             const SizedBox(height: 24),
             Text('반복 요일', style: Theme.of(context).textTheme.titleMedium),
@@ -163,24 +205,30 @@ class _CreateRoutineScreenState extends State<CreateRoutineScreen> {
   void _submit() {
     final title = _titleController.text.trim();
     if (title.isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('루틴 제목을 입력해 주세요.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('루틴 제목을 입력해 주세요.')));
       return;
     }
     final time = _selectedTime;
     if (time == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('시간을 선택해 주세요.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('시간을 선택해 주세요.')));
       return;
     }
     if (_selectedDays.isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('반복할 요일을 한 개 이상 선택해 주세요.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('반복할 요일을 한 개 이상 선택해 주세요.')));
       return;
     }
 
     final orderedDays = _selectedDays.toList()
-      ..sort((a, b) => _weekdayOptions.indexOf(a).compareTo(_weekdayOptions.indexOf(b)));
+      ..sort(
+        (a, b) =>
+            _weekdayOptions.indexOf(a).compareTo(_weekdayOptions.indexOf(b)),
+      );
 
     Navigator.of(context).pop(
       RoutineFormResult(
@@ -188,12 +236,15 @@ class _CreateRoutineScreenState extends State<CreateRoutineScreen> {
         time: time,
         iconKey: _selectedIconKey,
         days: orderedDays,
+        difficulty: _selectedDifficulty,
       ),
     );
   }
 
   String _formatTime(TimeOfDay time) {
-    return MaterialLocalizations.of(context).formatTimeOfDay(time, alwaysUse24HourFormat: true);
+    return MaterialLocalizations.of(
+      context,
+    ).formatTimeOfDay(time, alwaysUse24HourFormat: true);
   }
 
   TimeOfDay _parseTime(String value) {

@@ -11,6 +11,7 @@ pip install -r requirements.txt
 cp .env.sample .env
 ```
 `.env`에서 Ollama URL, 모델, ADMIN_TOKEN, DB_URL을 조정할 수 있습니다.
+> **NOTE** 전역 Python을 쓸 경우 `pip install --upgrade "sqlalchemy>=1.4"`를 실행해 `async_sessionmaker`가 포함된 버전을 맞춰 주세요. 가장 안전한 방법은 위 명령처럼 프로젝트 전용 가상환경을 사용하는 것입니다.
 
 ## 2. 개발 서버 실행
 ```bash

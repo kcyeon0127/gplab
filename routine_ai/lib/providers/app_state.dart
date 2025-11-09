@@ -35,6 +35,8 @@ class AppState extends ChangeNotifier {
   bool get isLoadingRoutines => _isLoadingRoutines;
   int get selectedDayIndex => _selectedDayIndex;
   bool get isWeeklyPanelOpen => _isWeeklyPanelOpen;
+  String routineStatusForDate(int routineId, DateTime date) =>
+      _statusForRoutineOnDate(routineId, date);
 
   ApiClient get apiClient => _apiClient;
 
@@ -113,14 +115,20 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     try {
       final routines = await _apiClient.fetchUserRoutines();
-      final statusMap = {for (final routine in _calendarRoutines) routine.id: routine.status};
+      final statusMap = {
+        for (final routine in _calendarRoutines) routine.id: routine.status,
+      };
       _calendarRoutines
         ..clear()
-        ..addAll(routines.map((remote) {
-          final mapped = _calendarRoutineFromRemote(remote);
-          final preserved = statusMap[mapped.id];
-          return preserved == null ? mapped : mapped.copyWith(status: preserved);
-        }));
+        ..addAll(
+          routines.map((remote) {
+            final mapped = _calendarRoutineFromRemote(remote);
+            final preserved = statusMap[mapped.id];
+            return preserved == null
+                ? mapped
+                : mapped.copyWith(status: preserved);
+          }),
+        );
       _sortCalendarRoutines();
       _recalculateWeeklyData();
       _hasLoadedRoutines = true;
@@ -139,13 +147,14 @@ class AppState extends ChangeNotifier {
     required TimeOfDay time,
     required List<String> days,
     required String iconKey,
+    required String difficulty,
   }) async {
     try {
       final remote = await _apiClient.createRoutine(
         title: title,
         time: _formatTimeOfDay(time),
         days: days,
-        difficulty: 'mid',
+        difficulty: difficulty,
         active: true,
         iconKey: iconKey,
       );
@@ -165,6 +174,7 @@ class AppState extends ChangeNotifier {
     required TimeOfDay time,
     required List<String> days,
     required String iconKey,
+    required String difficulty,
   }) async {
     try {
       final remote = await _apiClient.updateRoutine(
@@ -172,15 +182,18 @@ class AppState extends ChangeNotifier {
         title: title,
         time: _formatTimeOfDay(time),
         days: days,
-        difficulty: 'mid',
+        difficulty: difficulty,
         active: true,
         iconKey: iconKey,
       );
-      final index = _calendarRoutines.indexWhere((routine) => routine.id == routineId);
+      final index = _calendarRoutines.indexWhere(
+        (routine) => routine.id == routineId,
+      );
       if (index != -1) {
         final preservedStatus = _calendarRoutines[index].status;
-        _calendarRoutines[index] =
-            _calendarRoutineFromRemote(remote).copyWith(status: preservedStatus);
+        _calendarRoutines[index] = _calendarRoutineFromRemote(
+          remote,
+        ).copyWith(status: preservedStatus);
       }
       _sortCalendarRoutines();
       _recalculateWeeklyData();
@@ -204,7 +217,12 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  void changeCalendarRoutineStatus(int routineId, String status, {DateTime? date}) {
+  void changeCalendarRoutineStatus(
+    int routineId,
+    String status, {
+    DateTime? date,
+  }) {
+    final targetDate = _normalizeDate(date ?? DateTime.now());
     final index = _calendarRoutines.indexWhere(
       (element) => element.id == routineId,
     );
@@ -212,9 +230,41 @@ class AppState extends ChangeNotifier {
     _calendarRoutines[index] = _calendarRoutines[index].copyWith(
       status: status,
     );
-    _recordRoutineStatus(routineId: routineId, status: status, date: date ?? DateTime.now());
+    _recordRoutineStatus(
+      routineId: routineId,
+      status: status,
+      date: targetDate,
+    );
     _recalculateWeeklyData();
     _refreshSelectedDayRoutines();
+  }
+
+  Future<RoutineCompletionResult> completeRoutine({
+    required RoutineItem routine,
+    required String status,
+    DateTime? completedDate,
+  }) async {
+    final targetDate = _normalizeDate(completedDate ?? DateTime.now());
+    final routineTime = _parseTimeOfDayString(routine.time);
+    final startedAt = DateTime(
+      targetDate.year,
+      targetDate.month,
+      targetDate.day,
+      routineTime.hour,
+      routineTime.minute,
+    );
+    final endedAt = startedAt.add(const Duration(minutes: 30));
+
+    final result = await _apiClient.reportRoutineCompletion(
+      routineId: routine.id,
+      status: status,
+      startedAt: startedAt,
+      endedAt: endedAt,
+      note: null,
+    );
+    _petState = result.petState;
+    changeCalendarRoutineStatus(routine.id, status, date: targetDate);
+    return result;
   }
 
   int _resolveInitialIndex() {
@@ -227,7 +277,6 @@ class AppState extends ChangeNotifier {
     }
     return 0;
   }
-
 
   void _sortCalendarRoutines() {
     _calendarRoutines.sort((a, b) {
@@ -245,8 +294,24 @@ class AppState extends ChangeNotifier {
 
   List<DateTime> _referenceDates() {
     final baseYear = DateTime.now().year;
-    final startDate = DateTime(baseYear, 11, 3);
-    return List<DateTime>.generate(14, (index) => startDate.add(Duration(days: index)));
+    final startDate = _alignedNovemberStart(baseYear);
+    return List<DateTime>.generate(
+      14,
+      (index) => startDate.add(Duration(days: index)),
+      growable: false,
+    );
+  }
+
+  DateTime _alignedNovemberStart(int year) {
+    var startDate = DateTime(year, 11, 3);
+    if (startDate.weekday != DateTime.monday) {
+      var offset = DateTime.monday - startDate.weekday;
+      if (offset < 0) {
+        offset += 7;
+      }
+      startDate = startDate.add(Duration(days: offset));
+    }
+    return startDate;
   }
 
   WeeklyDayStatus _buildWeeklyStatusForDate(DateTime date) {
@@ -306,12 +371,19 @@ class AppState extends ChangeNotifier {
     }).toList();
   }
 
-  void _recordRoutineStatus({required int routineId, required String status, required DateTime date}) {
-    final key = _dateKey(date);
+  void _recordRoutineStatus({
+    required int routineId,
+    required String status,
+    required DateTime date,
+  }) {
+    final normalized = _normalizeDate(date);
+    final key = _dateKey(normalized);
     final entries = _dailyRoutineStatuses.putIfAbsent(key, () => {});
     entries[routineId] = status;
     final validKeys = _referenceDates().map(_dateKey).toSet();
-    _dailyRoutineStatuses.removeWhere((entryKey, _) => !validKeys.contains(entryKey));
+    _dailyRoutineStatuses.removeWhere(
+      (entryKey, _) => !validKeys.contains(entryKey),
+    );
   }
 
   void _removeRoutineStatuses(int routineId) {
@@ -338,11 +410,14 @@ class AppState extends ChangeNotifier {
   }
 
   String _statusForRoutineOnDate(int routineId, DateTime date) {
-    final key = _dateKey(date);
+    final key = _dateKey(_normalizeDate(date));
     return _dailyRoutineStatuses[key]?[routineId] ?? 'pending';
   }
 
   String _dateKey(DateTime date) => '${date.year}-${date.month}-${date.day}';
+
+  DateTime _normalizeDate(DateTime date) =>
+      DateTime(date.year, date.month, date.day);
 
   double _scoreForStatus(String status) {
     switch (status) {
@@ -365,6 +440,10 @@ class AppState extends ChangeNotifier {
         return RoutineDayResult.done;
       case 'miss':
         return RoutineDayResult.miss;
+      case 'late':
+        return RoutineDayResult.done;
+      case 'partial':
+        return RoutineDayResult.pending;
       default:
         return RoutineDayResult.pending;
     }
@@ -397,6 +476,7 @@ class AppState extends ChangeNotifier {
       status: 'pending',
       iconKey: remote.iconKey,
       days: remote.days,
+      difficulty: remote.difficulty,
     );
   }
 
@@ -412,5 +492,4 @@ class AppState extends ChangeNotifier {
     final minute = int.tryParse(parts.length > 1 ? parts[1] : '') ?? 0;
     return TimeOfDay(hour: hour.clamp(0, 23), minute: minute.clamp(0, 59));
   }
-
 }

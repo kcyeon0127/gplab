@@ -11,6 +11,7 @@ class CalendarRoutine {
     required this.status,
     required this.iconKey,
     required this.days,
+    required this.difficulty,
   });
 
   final int id;
@@ -19,6 +20,7 @@ class CalendarRoutine {
   final String status;
   final String iconKey;
   final List<String> days;
+  final String difficulty;
 
   IconData get icon => iconFromKey(iconKey);
 
@@ -28,6 +30,7 @@ class CalendarRoutine {
     String? status,
     String? iconKey,
     List<String>? days,
+    String? difficulty,
   }) {
     return CalendarRoutine(
       id: id,
@@ -36,6 +39,7 @@ class CalendarRoutine {
       status: status ?? this.status,
       iconKey: iconKey ?? this.iconKey,
       days: days ?? this.days,
+      difficulty: difficulty ?? this.difficulty,
     );
   }
 }
@@ -67,19 +71,24 @@ class RoutineRecommendation {
     required this.iconKey,
     required this.time,
     required this.days,
+    required this.difficulty,
   });
 
   final String title;
   final String iconKey;
   final String time;
   final List<String> days;
+  final String difficulty;
 
   factory RoutineRecommendation.fromJson(Map<String, dynamic> json) {
     return RoutineRecommendation(
       title: json['title']?.toString() ?? '',
       iconKey: json['icon']?.toString() ?? 'yoga',
       time: json['time']?.toString() ?? '07:00',
-      days: (json['days'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+      days:
+          (json['days'] as List?)?.map((e) => e.toString()).toList() ??
+          const [],
+      difficulty: json['difficulty']?.toString() ?? 'mid',
     );
   }
 
@@ -89,6 +98,7 @@ class RoutineRecommendation {
       'icon': iconKey,
       'time': time,
       'days': days,
+      'difficulty': difficulty,
     };
   }
 }

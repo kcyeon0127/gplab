@@ -1,4 +1,21 @@
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+"""Database session/engine helpers."""
+
+from __future__ import annotations
+
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+
+# SQLAlchemy 1.4에서는 ``async_sessionmaker`` 가 없을 수 있으므로 안전하게 폴백한다.
+try:  # pragma: no cover - 단순 임포트 가드
+  from sqlalchemy.ext.asyncio import async_sessionmaker
+except ImportError:  # pragma: no cover - 구버전 SQLAlchemy 대응
+  from sqlalchemy.orm import sessionmaker
+
+  def async_sessionmaker(*args, **kwargs):  # type: ignore[misc]
+    """구버전 SQLAlchemy 호환용 sessionmaker."""
+
+    kwargs.setdefault('class_', AsyncSession)
+    kwargs.setdefault('expire_on_commit', False)
+    return sessionmaker(*args, **kwargs)
 
 from .config import settings
 from .models.base import Base  # noqa: F401

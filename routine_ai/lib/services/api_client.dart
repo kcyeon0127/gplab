@@ -18,7 +18,11 @@ class ApiException implements Exception {
 
 /// 펫 상태 데이터 모델.
 class PetState {
-  PetState({required this.level, required this.xp, required this.nextLevelThreshold});
+  PetState({
+    required this.level,
+    required this.xp,
+    required this.nextLevelThreshold,
+  });
 
   final int level;
   final int xp;
@@ -61,8 +65,14 @@ class RoutinePlan {
     final difficulty = json['difficulty'];
     final reason = json['reason'];
 
-    if (title is String && time is String && duration is num && difficulty is String && reason is String) {
-      final dayList = days is List ? days.map((e) => e.toString()).toList() : <String>[];
+    if (title is String &&
+        time is String &&
+        duration is num &&
+        difficulty is String &&
+        reason is String) {
+      final dayList = days is List
+          ? days.map((e) => e.toString()).toList()
+          : <String>[];
       return RoutinePlan(
         title: title,
         days: dayList,
@@ -107,15 +117,19 @@ class RoutineRemote {
     final difficulty = (json['difficulty'] ?? 'mid').toString();
     final activeRaw = json['active'];
     final iconKey = json['icon_key'] ?? json['iconKey'] ?? 'yoga';
-    if (id is int && userId is int && title is String && time is String && iconKey is String) {
+    if (id is int &&
+        userId is int &&
+        title is String &&
+        time is String &&
+        iconKey is String) {
       final days = daysRaw is List
           ? daysRaw.map((e) => e.toString()).toList()
           : <String>[];
       final isActive = activeRaw is bool
           ? activeRaw
           : activeRaw is num
-              ? activeRaw != 0
-              : true;
+          ? activeRaw != 0
+          : true;
       return RoutineRemote(
         id: id,
         userId: userId,
@@ -155,9 +169,15 @@ class WeeklyStats {
     final tips = json['tips'];
 
     if (rate is num && streak is int) {
-      final slotList = bestSlots is List ? bestSlots.map((e) => e.toString()).toList() : <String>[];
-      final insightList = insights is List ? insights.map((e) => e.toString()).toList() : <String>[];
-      final tipList = tips is List ? tips.map((e) => e.toString()).toList() : <String>[];
+      final slotList = bestSlots is List
+          ? bestSlots.map((e) => e.toString()).toList()
+          : <String>[];
+      final insightList = insights is List
+          ? insights.map((e) => e.toString()).toList()
+          : <String>[];
+      final tipList = tips is List
+          ? tips.map((e) => e.toString()).toList()
+          : <String>[];
       return WeeklyStats(
         completionRate: rate.toDouble(),
         streak: streak,
@@ -172,7 +192,11 @@ class WeeklyStats {
 
 /// 루틴 완료 보고 결과 모델.
 class RoutineCompletionResult {
-  RoutineCompletionResult({required this.petState, required this.streak, required this.coachHint});
+  RoutineCompletionResult({
+    required this.petState,
+    required this.streak,
+    required this.coachHint,
+  });
 
   final PetState petState;
   final int? streak;
@@ -196,15 +220,15 @@ class RoutineCompletionResult {
 /// FastAPI 백엔드 호출을 담당하는 클라이언트.
 class ApiClient {
   ApiClient()
-      : _dio = Dio(
-          BaseOptions(
-            baseUrl: resolvedApiBase,
-            connectTimeout: const Duration(seconds: 10),
-            receiveTimeout: const Duration(seconds: 10),
-            sendTimeout: const Duration(seconds: 10),
-            headers: const {'Content-Type': 'application/json'},
-          ),
-        );
+    : _dio = Dio(
+        BaseOptions(
+          baseUrl: resolvedApiBase,
+          connectTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 10),
+          sendTimeout: const Duration(seconds: 10),
+          headers: const {'Content-Type': 'application/json'},
+        ),
+      );
 
   final Dio _dio;
 
@@ -215,10 +239,7 @@ class ApiClient {
         data: {
           'user_id': 1,
           'message': message,
-          'context_flags': {
-            'include_calendar': true,
-            'include_stats': true,
-          },
+          'context_flags': {'include_calendar': true, 'include_stats': true},
         },
       );
       final data = response.data;
@@ -234,7 +255,10 @@ class ApiClient {
 
   Future<PetState> fetchPetState() {
     return _guard(() async {
-      final response = await _dio.get('/api/pet/state', queryParameters: {'user_id': 1});
+      final response = await _dio.get(
+        '/api/pet/state',
+        queryParameters: {'user_id': 1},
+      );
       final data = response.data;
       if (data is Map<String, dynamic>) {
         return PetState.fromJson(data);
@@ -263,6 +287,7 @@ class ApiClient {
       iconKey: _iconKeyForPlan(plan),
       time: plan.time,
       days: plan.days,
+      difficulty: plan.difficulty,
     );
   }
 
@@ -297,7 +322,10 @@ class ApiClient {
 
   Future<WeeklyStats> fetchWeeklyStats() {
     return _guard(() async {
-      final response = await _dio.get('/api/stats/weekly', queryParameters: {'user_id': 1});
+      final response = await _dio.get(
+        '/api/stats/weekly',
+        queryParameters: {'user_id': 1},
+      );
       final data = response.data;
       if (data is Map<String, dynamic>) {
         return WeeklyStats.fromJson(data);
@@ -335,7 +363,10 @@ class ApiClient {
 
   Future<List<RoutineRemote>> fetchUserRoutines() {
     return _guard(() async {
-      final response = await _dio.get('/api/routine', queryParameters: {'user_id': 1});
+      final response = await _dio.get(
+        '/api/routine',
+        queryParameters: {'user_id': 1},
+      );
       final data = response.data;
       if (data is List) {
         return data

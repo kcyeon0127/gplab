@@ -13,8 +13,8 @@ async def coach_chat(
   ollama: OllamaClient = Depends(get_ollama_client),
 ) -> CoachChatResponse:
   prompt = (
-    '당신은 건강 루틴 코치입니다. 사용자 메시지를 3문장 이내로 공감하며 답하세요.'
-    f"사용자 메시지: {payload.message}"
+    '당신은 건강 루틴 코치입니다. 사용자 메시지를 3문장 이내로 공감하며 답하세요.\n'
+    f"사용자 메시지: {payload.message}\n"
   )
   try:
     reply = await ollama.generate(prompt)
