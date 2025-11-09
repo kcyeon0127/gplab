@@ -10,11 +10,17 @@ class PetAvatar extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Image.asset('assets/pet.png', width: 120, height: 120, fit: BoxFit.contain),
+        Image.asset(
+          'assets/pet.png',
+          width: 120,
+          height: 120,
+          fit: BoxFit.contain,
+        ),
         const SizedBox(height: 8),
-        Text('Babymarutchi', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 4),
-        Text('Lv.1', style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey)),
+        Text(
+          'Lv.1',
+          style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey),
+        ),
       ],
     );
   }

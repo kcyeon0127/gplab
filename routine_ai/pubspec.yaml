@@ -22,4 +22,6 @@ flutter:
   uses-material-design: true
   assets:
     - assets/pet.png
+    - lib/assets/xp.png
+    - lib/assets/present.png
     - lib/data/coach_templates.json

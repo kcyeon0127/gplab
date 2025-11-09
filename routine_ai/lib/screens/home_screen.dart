@@ -91,93 +91,76 @@ class _HomeScreenState extends State<HomeScreen> {
         : weekly[selectedIndex];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Home')),
+      appBar: AppBar(title: const SizedBox.shrink()),
       body: Stack(
         children: [
           SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                PetStatusCard(
-                  petState: appState.petState,
-                  isLoading: appState.isLoadingPet,
-                ),
-                const SizedBox(height: 24),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      '11월',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+            child: SafeArea(
+              bottom: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  PetStatusCard(
+                    petState: appState.petState,
+                    isLoading: appState.isLoadingPet,
                   ),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 110,
-                  child: WeeklyRingBar(
-                    weekly: weekly,
-                    selectedIndex: selectedIndex,
-                    onSelect: (index) =>
-                        context.read<AppState>().selectDay(index),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Center(
-                  child: TriangleToggleButton(
-                    isOpen: appState.isWeeklyPanelOpen,
-                    onTap: () => context.read<AppState>().toggleWeeklyPanel(),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Align(
-                  alignment: Alignment.center,
-                  child: CoachSection(
-                    onGo: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const RecommendScreen(),
+                  const SizedBox(height: 12),
+                  const Divider(),
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '11월',
+                        style: Theme.of(context).textTheme.titleMedium,
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: _isFetchingRecommend
-                        ? null
-                        : _openAiRecommendRoutine,
-                    icon: _isFetchingRecommend
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Icon(Icons.auto_awesome),
-                    label: Text(
-                      _isFetchingRecommend ? '불러오는 중...' : 'AI 추천으로 추가',
+                  const SizedBox(height: 6),
+                  SizedBox(
+                    height: 110,
+                    child: WeeklyRingBar(
+                      weekly: weekly,
+                      selectedIndex: selectedIndex,
+                      onSelect: (index) =>
+                          context.read<AppState>().selectDay(index),
                     ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                // 오늘(또는 선택 요일) 루틴 리스트
-                _buildTodaySection(
-                  context,
-                  selectedStatus,
-                  appState.selectedDayRoutines,
-                  appState,
-                ),
+                  const SizedBox(height: 10),
+                  Center(
+                    child: TriangleToggleButton(
+                      isOpen: appState.isWeeklyPanelOpen,
+                      onTap: () => context.read<AppState>().toggleWeeklyPanel(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Align(
+                    alignment: Alignment.center,
+                    child: CoachSection(
+                      onGo: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const RecommendScreen(),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // 오늘(또는 선택 요일) 루틴 리스트
+                  _buildTodaySection(
+                    context,
+                    selectedStatus,
+                    appState.selectedDayRoutines,
+                    appState,
+                  ),
 
-                const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-                // AI 루틴 추천 이동 카드
-                _buildRecommendCard(context),
-              ],
+                  // AI 루틴 추천 이동 카드
+                  _buildRecommendCard(context),
+                ],
+              ),
             ),
           ),
 
@@ -417,7 +400,10 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       await Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => CreateRoutineScreen(initialRoutine: recommendation),
+          builder: (_) => CreateRoutineScreen(
+            initialRoutine: recommendation,
+            initialDifficulty: recommendation.difficulty,
+          ),
         ),
       );
     } on ApiException catch (error) {

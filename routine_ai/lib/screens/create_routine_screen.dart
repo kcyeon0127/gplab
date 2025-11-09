@@ -133,12 +133,8 @@ class _CreateRoutineScreenState extends State<CreateRoutineScreen> {
             Wrap(
               spacing: 8,
               children: ['easy', 'mid', 'hard'].map((level) {
-                final label = switch (level) {
-                  'easy' => '쉬움',
-                  'mid' => '보통',
-                  'hard' => '어려움',
-                  _ => level,
-                };
+                final labels = {'easy': '쉬움', 'mid': '보통', 'hard': '어려움'};
+                final label = labels[level] ?? level;
                 return ChoiceChip(
                   label: Text(label),
                   selected: _selectedDifficulty == level,
